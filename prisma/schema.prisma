@@ -1,0 +1,172 @@
+// Safar Express Prisma Schema
+// SQLite compatible (easily switchable to PostgreSQL by updating provider & DATABASE_URL)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  phone        String    @unique
+  email        String    @unique
+  passwordHash String
+  role         String    @default("CUSTOMER") // Role: CUSTOMER | ADMIN
+  bookings     Booking[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([email])
+  @@index([phone])
+}
+
+model City {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  stops     RouteStop[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([name])
+}
+
+model Route {
+  id        String      @id @default(cuid())
+  name      String
+  stops     RouteStop[]
+  trips     Trip[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model RouteStop {
+  id               String        @id @default(cuid())
+  routeId          String
+  cityId           String
+  stopOrder        Int
+  fareFromOrigin   Float
+  route            Route         @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  city             City          @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  fromBookingSeats BookingSeat[] @relation("FromStop")
+  toBookingSeats   BookingSeat[] @relation("ToStop")
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@unique([routeId, stopOrder])
+  @@unique([routeId, cityId])
+  @@index([routeId])
+  @@index([cityId])
+}
+
+model Bus {
+  id         String   @id @default(cuid())
+  number     String   @unique
+  type       String   @default("EXECUTIVE") // BusType: BUSINESS | EXECUTIVE
+  totalSeats Int
+  layout     String   // e.g. "2x1", "2x2"
+  trips      Trip[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([number])
+}
+
+model Trip {
+  id            String        @id @default(cuid())
+  routeId       String
+  busId         String
+  direction     String        @default("FORWARD") // TripDirection: FORWARD | REVERSE
+  departureTime DateTime
+  status        String        @default("SCHEDULED") // TripStatus: SCHEDULED | CANCELLED | COMPLETED
+  route         Route         @relation(fields: [routeId], references: [id], onDelete: Restrict)
+  bus           Bus           @relation(fields: [busId], references: [id], onDelete: Restrict)
+  bookings      Booking[]
+  bookingSeats  BookingSeat[]
+  seatLocks     SeatLock[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([routeId, departureTime])
+  @@index([busId, departureTime])
+  @@index([status])
+  @@index([departureTime])
+}
+
+model Booking {
+  id            String        @id @default(cuid())
+  pnr           String        @unique
+  userId        String?
+  tripId        String
+  totalAmount   Float
+  status        String        @default("PENDING") // BookingStatus: PENDING | CONFIRMED | CANCELLED | EXPIRED
+  paymentStatus String        @default("UNPAID")  // PaymentStatus: UNPAID | PAID | REFUNDED
+  contactPhone  String
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  trip          Trip          @relation(fields: [tripId], references: [id], onDelete: Restrict)
+  seats         BookingSeat[]
+  payments      Payment[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([pnr])
+  @@index([userId])
+  @@index([tripId])
+  @@index([status])
+}
+
+model BookingSeat {
+  id            String    @id @default(cuid())
+  bookingId     String
+  tripId        String
+  seatNo        Int
+  passengerName String
+  cnic          String
+  gender        String    // Gender: MALE | FEMALE
+  fromStopId    String
+  toStopId      String
+  fare          Float
+  booking       Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  trip          Trip      @relation(fields: [tripId], references: [id], onDelete: Restrict)
+  fromStop      RouteStop @relation("FromStop", fields: [fromStopId], references: [id], onDelete: Restrict)
+  toStop        RouteStop @relation("ToStop", fields: [toStopId], references: [id], onDelete: Restrict)
+  createdAt     DateTime  @default(now())
+
+  @@index([bookingId])
+  @@index([tripId, seatNo])
+  @@index([fromStopId])
+  @@index([toStopId])
+}
+
+model SeatLock {
+  id          String   @id @default(cuid())
+  tripId      String
+  seatNo      Int
+  sessionId   String
+  lockedUntil DateTime
+  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([tripId, seatNo, sessionId])
+  @@index([tripId, seatNo])
+  @@index([lockedUntil])
+}
+
+model Payment {
+  id             String   @id @default(cuid())
+  bookingId      String
+  method         String   @default("CASH") // PaymentMethod: CASH | MOCK_ONLINE
+  amount         Float
+  status         String   @default("SUCCESS") // PaymentRecordStatus: SUCCESS | PENDING | FAILED | REFUNDED
+  transactionRef String?  @unique
+  booking        Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([bookingId])
+  @@index([transactionRef])
+}
