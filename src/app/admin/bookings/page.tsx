@@ -869,8 +869,9 @@ export default function AdminBookingsPage() {
           isOpen={!!confirmingPaymentBooking}
           title="Confirm Cash Payment"
           message={`Are you sure you want to confirm cash payment of Rs. ${confirmingPaymentBooking.totalAmount.toLocaleString()} for PNR "${confirmingPaymentBooking.pnr}" (${confirmingPaymentBooking.customerName})? This will transition ticket status to CONFIRMED and generate an official ticket.`}
-          confirmLabel={confirmingLoading ? "Confirming..." : "Confirm as Paid"}
-          confirmVariant="primary"
+          confirmText={confirmingLoading ? "Confirming..." : "Confirm as Paid"}
+          isDestructive={false}
+          loading={confirmingLoading}
           onConfirm={handleConfirmCashPayment}
           onCancel={() => setConfirmingPaymentBooking(null)}
         />

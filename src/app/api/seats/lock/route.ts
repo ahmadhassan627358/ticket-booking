@@ -194,6 +194,9 @@ export async function POST(req: Request) {
         lockedUntil: lockedUntil.toISOString(),
         secondsRemaining: 600,
       };
+    }, {
+      maxWait: 10000,
+      timeout: 25000,
     });
 
     return NextResponse.json({

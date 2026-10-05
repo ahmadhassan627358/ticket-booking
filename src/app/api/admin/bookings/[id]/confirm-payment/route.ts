@@ -81,6 +81,9 @@ export async function POST(
       });
 
       return { booking: updatedBooking, alreadyPaid: false };
+    }, {
+      maxWait: 10000,
+      timeout: 25000,
     });
 
     return NextResponse.json({

@@ -94,13 +94,15 @@ export const CreateBookingRequestSchema = z.object({
     message: "Please provide a valid Pakistani contact phone number (03XX-XXXXXXX)",
   }),
   contactEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
-  paymentMethod: z.enum(["CASH", "MOCK_ONLINE"]),
+  paymentMethod: z.enum(["CASH", "MOCK_ONLINE", "EASYPAISA", "JAZZCASH", "STRIPE"]),
   paymentMetadata: z
     .object({
+      walletNumber: z.string().optional(),
       cardNumber: z.string().optional(),
       cardExpiry: z.string().optional(),
       cardCvc: z.string().optional(),
       cardHolder: z.string().optional(),
+      stripeToken: z.string().optional(),
       forceFail: z.boolean().optional(),
     })
     .optional(),

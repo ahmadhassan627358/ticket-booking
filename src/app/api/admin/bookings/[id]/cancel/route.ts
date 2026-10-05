@@ -113,6 +113,9 @@ export async function POST(
         releasedSeatsCount: booking.seats.length,
         wasPaid,
       };
+    }, {
+      maxWait: 10000,
+      timeout: 25000,
     });
 
     return NextResponse.json({

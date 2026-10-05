@@ -144,6 +144,9 @@ export async function POST(
         refundAmount,
         releasedSeatsCount: booking.seats.length,
       };
+    }, {
+      maxWait: 10000,
+      timeout: 25000,
     });
 
     return NextResponse.json({

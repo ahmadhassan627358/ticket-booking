@@ -92,9 +92,12 @@ function CheckoutContent() {
   const [contactEmail, setContactEmail] = useState("");
 
   // Payment Selection
-  const [paymentMethod, setPaymentMethod] = useState<"MOCK_ONLINE" | "CASH">("MOCK_ONLINE");
+  const [paymentMethod, setPaymentMethod] = useState<"MOCK_ONLINE" | "CASH" | "EASYPAISA" | "JAZZCASH" | "STRIPE">("EASYPAISA");
 
-  // Mock Card Details
+  // Mobile Wallet State (Easypaisa / JazzCash)
+  const [walletNumber, setWalletNumber] = useState("");
+
+  // Card / Simulator / Stripe Details
   const [cardNumber, setCardNumber] = useState("4242 4242 4242 4242");
   const [cardExpiry, setCardExpiry] = useState("12/28");
   const [cardCvc, setCardCvc] = useState("123");
@@ -267,8 +270,18 @@ function CheckoutContent() {
       }
     });
 
-    // Validate Card if Mock Online selected
-    if (paymentMethod === "MOCK_ONLINE") {
+    // Validate Mobile Wallet if Easypaisa or JazzCash
+    if (paymentMethod === "EASYPAISA" || paymentMethod === "JAZZCASH") {
+      const activeWallet = walletNumber.trim() || contactPhone.trim();
+      if (!activeWallet) {
+        errs.walletNumber = `${paymentMethod === "EASYPAISA" ? "Easypaisa" : "JazzCash"} mobile account number is required.`;
+      } else if (!pakPhoneRegex.test(activeWallet)) {
+        errs.walletNumber = "Please enter a valid Pakistani mobile number (03XX-XXXXXXX).";
+      }
+    }
+
+    // Validate Card if Mock Online or Stripe selected
+    if (paymentMethod === "MOCK_ONLINE" || paymentMethod === "STRIPE") {
       if (!cardNumber.replace(/\s/g, "")) {
         errs.cardNumber = "Card number is required.";
       }
@@ -305,6 +318,23 @@ function CheckoutContent() {
     setSubmitting(true);
 
     try {
+      let paymentMetadata: Record<string, any> | undefined = undefined;
+
+      if (paymentMethod === "EASYPAISA" || paymentMethod === "JAZZCASH") {
+        paymentMetadata = {
+          walletNumber: walletNumber.trim() || contactPhone.trim(),
+          forceFail,
+        };
+      } else if (paymentMethod === "MOCK_ONLINE" || paymentMethod === "STRIPE") {
+        paymentMetadata = {
+          cardNumber,
+          cardExpiry,
+          cardCvc,
+          cardHolder: cardHolder || passengers[0]?.passengerName || "Customer",
+          forceFail,
+        };
+      }
+
       const payload = {
         tripId,
         fromStopId: fromStopId || trip?.fromStop.id,
@@ -313,16 +343,7 @@ function CheckoutContent() {
         contactPhone,
         contactEmail: contactEmail.trim() || undefined,
         paymentMethod,
-        paymentMetadata:
-          paymentMethod === "MOCK_ONLINE"
-            ? {
-                cardNumber,
-                cardExpiry,
-                cardCvc,
-                cardHolder: cardHolder || passengers[0]?.passengerName || "Customer",
-                forceFail,
-              }
-            : undefined,
+        paymentMetadata,
         passengers: passengers.map((p) => ({
           seatNo: p.seatNo,
           passengerName: p.passengerName,
@@ -684,86 +705,267 @@ function CheckoutContent() {
                   </span>
                 </div>
 
-                {/* Provider Tabs */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Mock Online Option */}
+                {/* Provider Tabs Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {/* Easypaisa */}
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("EASYPAISA")}
+                    className={`p-3.5 rounded-2xl border-2 text-left transition-all flex flex-col justify-between gap-2.5 ${
+                      paymentMethod === "EASYPAISA"
+                        ? "bg-emerald-950/60 border-emerald-500 shadow-lg shadow-emerald-500/20"
+                        : "bg-slate-950 border-slate-800 hover:border-slate-700 opacity-80"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 font-black flex items-center justify-center text-xs">
+                          EP
+                        </div>
+                        <div>
+                          <div className="font-bold text-sm text-white">Easypaisa</div>
+                          <div className="text-[10px] text-emerald-400">Mobile Wallet / Push</div>
+                        </div>
+                      </div>
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        paymentMethod === "EASYPAISA" ? "border-emerald-500 bg-emerald-500" : "border-slate-700"
+                      }`}>
+                        {paymentMethod === "EASYPAISA" && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-emerald-300 font-medium">
+                      ✓ Instant OTP / MPIN prompt
+                    </span>
+                  </button>
+
+                  {/* JazzCash */}
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("JAZZCASH")}
+                    className={`p-3.5 rounded-2xl border-2 text-left transition-all flex flex-col justify-between gap-2.5 ${
+                      paymentMethod === "JAZZCASH"
+                        ? "bg-amber-950/60 border-orange-500 shadow-lg shadow-orange-500/20"
+                        : "bg-slate-950 border-slate-800 hover:border-slate-700 opacity-80"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-orange-500/20 text-orange-400 font-black flex items-center justify-center text-xs">
+                          JC
+                        </div>
+                        <div>
+                          <div className="font-bold text-sm text-white">JazzCash</div>
+                          <div className="text-[10px] text-orange-400">Mobile Account</div>
+                        </div>
+                      </div>
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        paymentMethod === "JAZZCASH" ? "border-orange-500 bg-orange-500" : "border-slate-700"
+                      }`}>
+                        {paymentMethod === "JAZZCASH" && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-orange-300 font-medium">
+                      ✓ Instant USSD prompt
+                    </span>
+                  </button>
+
+                  {/* Stripe Cards */}
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("STRIPE")}
+                    className={`p-3.5 rounded-2xl border-2 text-left transition-all flex flex-col justify-between gap-2.5 ${
+                      paymentMethod === "STRIPE"
+                        ? "bg-indigo-950/60 border-indigo-500 shadow-lg shadow-indigo-500/20"
+                        : "bg-slate-950 border-slate-800 hover:border-slate-700 opacity-80"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 font-black flex items-center justify-center text-xs">
+                          <CreditCard className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-sm text-white">Stripe Card</div>
+                          <div className="text-[10px] text-indigo-300">Visa / MC / Apple Pay</div>
+                        </div>
+                      </div>
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        paymentMethod === "STRIPE" ? "border-indigo-500 bg-indigo-500" : "border-slate-700"
+                      }`}>
+                        {paymentMethod === "STRIPE" && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-indigo-300 font-medium">
+                      ✓ 3D Secure / Global
+                    </span>
+                  </button>
+
+                  {/* Card Simulator */}
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("MOCK_ONLINE")}
-                    className={`p-4 rounded-2xl border-2 text-left transition-all flex flex-col justify-between gap-3 ${
+                    className={`p-3.5 rounded-2xl border-2 text-left transition-all flex flex-col justify-between gap-2.5 ${
                       paymentMethod === "MOCK_ONLINE"
                         ? "bg-blue-950/60 border-blue-500 shadow-lg shadow-blue-500/20"
                         : "bg-slate-950 border-slate-800 hover:border-slate-700 opacity-80"
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-blue-600/30 text-sky-400 flex items-center justify-center">
-                          <CreditCard className="w-5 h-5" />
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-blue-600/30 text-sky-400 flex items-center justify-center">
+                          <CreditCard className="w-4 h-4" />
                         </div>
                         <div>
-                          <div className="font-bold text-sm text-white">Instant Card / Digital</div>
-                          <div className="text-[11px] text-slate-400">Visa, Mastercard, PayPak</div>
+                          <div className="font-bold text-sm text-white">Card Simulator</div>
+                          <div className="text-[10px] text-slate-400">Sandbox Test</div>
                         </div>
                       </div>
-                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                        paymentMethod === "MOCK_ONLINE" ? "border-blue-500 bg-blue-500 text-slate-950" : "border-slate-700"
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        paymentMethod === "MOCK_ONLINE" ? "border-blue-500 bg-blue-500" : "border-slate-700"
                       }`}>
-                        {paymentMethod === "MOCK_ONLINE" && <div className="w-2 h-2 rounded-full bg-white" />}
+                        {paymentMethod === "MOCK_ONLINE" && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
                       </div>
                     </div>
-                    <span className="text-[11px] text-emerald-400 font-semibold">
-                      ✓ Instant E-Ticket Confirmation &amp; PDF
+                    <span className="text-[10px] text-emerald-400 font-medium">
+                      ✓ Instant E-Ticket PDF
                     </span>
                   </button>
 
-                  {/* Cash at Counter Option */}
+                  {/* Cash at Counter */}
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("CASH")}
-                    className={`p-4 rounded-2xl border-2 text-left transition-all flex flex-col justify-between gap-3 ${
+                    className={`p-3.5 rounded-2xl border-2 text-left transition-all flex flex-col justify-between gap-2.5 ${
                       paymentMethod === "CASH"
                         ? "bg-amber-950/60 border-amber-500 shadow-lg shadow-amber-500/20"
                         : "bg-slate-950 border-slate-800 hover:border-slate-700 opacity-80"
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-amber-600/30 text-amber-400 flex items-center justify-center">
-                          <Banknote className="w-5 h-5" />
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-amber-600/30 text-amber-400 flex items-center justify-center">
+                          <Banknote className="w-4 h-4" />
                         </div>
                         <div>
-                          <div className="font-bold text-sm text-white">Cash at Counter</div>
-                          <div className="text-[11px] text-slate-400">Pay at terminal before trip</div>
+                          <div className="font-bold text-sm text-white">Cash Counter</div>
+                          <div className="text-[10px] text-slate-400">Pay at terminal</div>
                         </div>
                       </div>
-                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                        paymentMethod === "CASH" ? "border-amber-500 bg-amber-500 text-slate-950" : "border-slate-700"
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        paymentMethod === "CASH" ? "border-amber-500 bg-amber-500" : "border-slate-700"
                       }`}>
-                        {paymentMethod === "CASH" && <div className="w-2 h-2 rounded-full bg-white" />}
+                        {paymentMethod === "CASH" && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
                       </div>
                     </div>
-                    <span className="text-[11px] text-amber-400 font-semibold">
-                      ⏱ Holds seat; expires 2 hrs before departure
+                    <span className="text-[10px] text-amber-400 font-medium">
+                      ⏱ Holds seat 2h before
                     </span>
                   </button>
                 </div>
 
-                {/* Extended Providers Notice (JazzCash / Easypaisa ready) */}
-                <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-                  <span>📱 JazzCash &amp; Easypaisa Mobile Accounts</span>
-                  <span className="text-xs bg-slate-800 text-slate-300 font-bold px-2 py-0.5 rounded-md">Coming Soon</span>
-                </div>
+                {/* Sub-form: Easypaisa Form */}
+                {paymentMethod === "EASYPAISA" && (
+                  <div className="p-4 sm:p-5 bg-emerald-950/30 rounded-2xl border border-emerald-800/80 space-y-4 animate-in fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5" /> Easypaisa Account Details
+                      </span>
+                      <span className="text-[11px] bg-emerald-900/60 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-700">
+                        Live Instant MA
+                      </span>
+                    </div>
 
-                {/* Sub-form: Card Form if MOCK_ONLINE */}
-                {paymentMethod === "MOCK_ONLINE" && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                        Easypaisa Registered Mobile Number <span className="text-red-400">*</span>
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-400 text-xs font-bold">
+                          🇵🇰 +92
+                        </div>
+                        <input
+                          type="text"
+                          placeholder={contactPhone || "0345-1234567"}
+                          value={walletNumber}
+                          onChange={(e) => {
+                            setWalletNumber(e.target.value);
+                            if (errors.walletNumber) {
+                              const errs = { ...errors };
+                              delete errs.walletNumber;
+                              setErrors(errs);
+                            }
+                          }}
+                          className={`w-full bg-slate-900 border pl-20 pr-4 py-2.5 rounded-xl text-sm font-mono text-white focus:outline-none transition-colors ${
+                            errors.walletNumber ? "border-red-500 focus:border-red-400" : "border-emerald-800 focus:border-emerald-400"
+                          }`}
+                        />
+                      </div>
+                      {errors.walletNumber && (
+                        <p className="text-red-400 text-xs mt-1">{errors.walletNumber}</p>
+                      )}
+                      <p className="text-[11px] text-slate-400 mt-1.5">
+                        Leave blank to use your primary contact number (<strong>{contactPhone || "03XX-XXXXXXX"}</strong>). You will receive an approval prompt on your phone.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sub-form: JazzCash Form */}
+                {paymentMethod === "JAZZCASH" && (
+                  <div className="p-4 sm:p-5 bg-amber-950/30 rounded-2xl border border-orange-800/80 space-y-4 animate-in fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-orange-300 flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5" /> JazzCash Mobile Account Details
+                      </span>
+                      <span className="text-[11px] bg-orange-900/60 text-orange-300 font-bold px-2 py-0.5 rounded-full border border-orange-700">
+                        Instant USSD / Push
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                        JazzCash Mobile Account Number <span className="text-red-400">*</span>
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-orange-400 text-xs font-bold">
+                          🇵🇰 +92
+                        </div>
+                        <input
+                          type="text"
+                          placeholder={contactPhone || "0300-1234567"}
+                          value={walletNumber}
+                          onChange={(e) => {
+                            setWalletNumber(e.target.value);
+                            if (errors.walletNumber) {
+                              const errs = { ...errors };
+                              delete errs.walletNumber;
+                              setErrors(errs);
+                            }
+                          }}
+                          className={`w-full bg-slate-900 border pl-20 pr-4 py-2.5 rounded-xl text-sm font-mono text-white focus:outline-none transition-colors ${
+                            errors.walletNumber ? "border-red-500 focus:border-red-400" : "border-orange-800 focus:border-orange-400"
+                          }`}
+                        />
+                      </div>
+                      {errors.walletNumber && (
+                        <p className="text-red-400 text-xs mt-1">{errors.walletNumber}</p>
+                      )}
+                      <p className="text-[11px] text-slate-400 mt-1.5">
+                        A USSD MPIN prompt will appear automatically on your Jazz mobile phone to authorize the transaction.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sub-form: Card Form if MOCK_ONLINE or STRIPE */}
+                {(paymentMethod === "MOCK_ONLINE" || paymentMethod === "STRIPE") && (
                   <div className="p-4 sm:p-5 bg-slate-950 rounded-2xl border border-slate-800 space-y-4 animate-in fade-in">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        Card Gateway Simulator Details
+                        {paymentMethod === "STRIPE" ? "Stripe 3D-Secure Card Details" : "Card Gateway Simulator Details"}
                       </span>
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="text-slate-400">Card Test Mode</span>
+                        <span className="text-slate-400">{paymentMethod === "STRIPE" ? "Live Encrypted" : "Test Mode"}</span>
                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                       </div>
                     </div>

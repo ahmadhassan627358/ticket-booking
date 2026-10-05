@@ -217,6 +217,9 @@ export async function POST(req: Request) {
         booking,
         paymentResult,
       };
+    }, {
+      maxWait: 10000,
+      timeout: 25000,
     });
 
     return NextResponse.json({

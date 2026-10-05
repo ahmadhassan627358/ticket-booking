@@ -12,19 +12,28 @@
     "prisma:migrate": "node scripts/migrate.js",
     "prisma:seed": "node scripts/seed.js",
     "prisma:studio": "prisma studio",
-    "db:reset": "prisma migrate reset --force"
+    "db:reset": "prisma migrate reset --force",
+    "cap:sync": "cap sync",
+    "cap:open": "cap open android",
+    "cap:build": "next build && cap sync android"
   },
   "prisma": {
     "seed": "node scripts/seed.js"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/cli": "8.5.2",
+    "@capacitor/core": "8.5.2",
     "@next/swc-win32-x64-msvc": "14.2.13",
     "@prisma/client": "^5.22.0",
+    "@types/qrcode": "^1.5.6",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "lucide-react": "^0.441.0",
     "next": "14.2.13",
     "next-auth": "^4.24.7",
+    "pdf-lib": "^1.17.1",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwind-merge": "^2.5.2",

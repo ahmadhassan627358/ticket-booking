@@ -192,7 +192,7 @@ export default async function AdminDashboardPage() {
       routeName: t.route.name,
       originCity,
       destCity,
-      direction: t.direction,
+      direction: t.direction as "FORWARD" | "REVERSE",
       busId: t.busId,
       busNumber: t.bus.number,
       busType: t.bus.type,

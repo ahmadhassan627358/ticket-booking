@@ -11,12 +11,12 @@ const rateLimitStore = new Map<string, RateLimitRecord>();
 if (typeof setInterval !== "undefined") {
   setInterval(() => {
     const now = Date.now();
-    for (const [key, record] of rateLimitStore.entries()) {
+    rateLimitStore.forEach((record, key) => {
       record.timestamps = record.timestamps.filter((ts) => now - ts < 60000);
       if (record.timestamps.length === 0) {
         rateLimitStore.delete(key);
       }
-    }
+    });
   }, 5 * 60 * 1000);
 }
 

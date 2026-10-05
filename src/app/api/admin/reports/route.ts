@@ -220,7 +220,7 @@ export async function GET(req: Request) {
     >();
 
     // Helper to get week key (YYYY-Www)
-    function getWeekKey(date: Date): { key: string; label: string } {
+    const getWeekKey = (date: Date): { key: string; label: string } => {
       const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
       const dayNum = d.getUTCDay() || 7;
       d.setUTCDate(d.getUTCDate() + 4 - dayNum);
@@ -234,7 +234,7 @@ export async function GET(req: Request) {
 
       const label = `W${weekNo} (${monDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${sunDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })})`;
       return { key: `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`, label };
-    }
+    };
 
     // Populate intervals
     if (groupBy === "day") {
