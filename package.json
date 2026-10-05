@@ -24,7 +24,6 @@
     "@capacitor/android": "8.5.2",
     "@capacitor/cli": "8.5.2",
     "@capacitor/core": "8.5.2",
-    "@next/swc-win32-x64-msvc": "14.2.13",
     "@prisma/client": "^5.22.0",
     "@types/qrcode": "^1.5.6",
     "bcryptjs": "^2.4.3",
